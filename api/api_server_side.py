@@ -35,7 +35,6 @@ def index():
               body: formData
           }).then(response => response.json())
             .then(data => {
-                alert('Upload success! File saved to: ' + data.file_path);
                 alert('Number on image is: ' + data.prediction);
                 console.log(data);
             })

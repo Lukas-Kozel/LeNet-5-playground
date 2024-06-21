@@ -20,7 +20,7 @@ def crop_image(image, contour):
     x, y, w, h = cv2.boundingRect(contour)
     
     # Crop the image using the bounding box coordinates
-    cropped_image = image[y:y+h, x:x+w]
+    cropped_image = image[y-5:y+h+5, x-5:x+w+5]
     
     return cropped_image
 
