@@ -14,9 +14,13 @@ def preprocess_image(frame):
     
     # Morphological operations
     kernel = np.ones((3, 3), np.uint8)
-    binary_image = cv2.dilate(binary_image, kernel, iterations=1)
-    binary_image = cv2.erode(binary_image, kernel, iterations=1)
+    #binary_image = cv2.dilate(binary_image, kernel, iterations=1)
+    #binary_image = cv2.erode(binary_image, kernel, iterations=1)
     binary_image = cv2.morphologyEx(binary_image, cv2.MORPH_CLOSE, kernel)
+
+    if np.mean(binary_image) > 127:  # Assuming black numbers on white background
+        binary_image = cv2.bitwise_not(binary_image)
+    
     cv2.imwrite('real_time_testing/step2_morph_image.jpg', binary_image)
     return frame, binary_image
     #_, bin = cv2.threshold(blurred,0,255,cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
@@ -26,7 +30,7 @@ def find_largest_contour(binary_image):
     contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # Filter out small contours based on contour area
-    min_contour_area = 500
+    min_contour_area = 60
     contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
     
     if contours:
@@ -52,9 +56,15 @@ def crop_image(image, contour):
     else: return None
 
 
-def maintain_grayscale():
-    #TODO
-    return
+def maintain_grayscale(image):
+    for row_idx, row in enumerate(image):
+        for col_idx, pixel in enumerate(row):
+            if pixel > 0.4:
+                image[row_idx, col_idx] = 1.0
+            elif pixel < 0.3:
+                image[row_idx, col_idx] = 0.0
+
+    return image
 
 
 def find_the_number(frame) -> np.ndarray:
@@ -82,6 +92,7 @@ def find_the_number(frame) -> np.ndarray:
     
     # Normalize the image
     resized_cropped_image = resized_cropped_image / 255.0
+    #resized_cropped_image = maintain_grayscale(resized_cropped_image)
     cv2.imwrite('real_time_testing/normalized_resized_cropped_image.jpg', (resized_cropped_image * 255).astype(np.uint8))
     
     # Convert to a TensorFlow tensor and add batch dimension

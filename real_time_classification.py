@@ -13,7 +13,7 @@ while True:
     prediction, probability = classify_number(find_the_number(frame))
 
     # Display the result
-    cv2.putText(frame, f'Prediction: {prediction}, probability: {probability}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+    cv2.putText(frame, f'Prediction: {prediction}, probability: {probability*100} %', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
     # Show the frame
     cv2.imshow('Realtime Classification', frame)
