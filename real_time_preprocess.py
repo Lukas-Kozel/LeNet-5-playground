@@ -1,4 +1,3 @@
-# this code is expecting number to be on white paper with nothing else for simplicity
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -7,36 +6,22 @@ from tensorflow.keras.models import load_model
 def preprocess_image(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    # Adaptive thresholding
-    binary_image = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                         cv2.THRESH_BINARY_INV, 11, 2)
-    cv2.imwrite('real_time_testing/step1_binary_image.jpg', binary_image)
-    
-    # Morphological operations
-    kernel = np.ones((3, 3), np.uint8)
-    #binary_image = cv2.dilate(binary_image, kernel, iterations=1)
-    #binary_image = cv2.erode(binary_image, kernel, iterations=1)
-    binary_image = cv2.morphologyEx(binary_image, cv2.MORPH_CLOSE, kernel)
 
-    if np.mean(binary_image) > 127:  # Assuming black numbers on white background
-        binary_image = cv2.bitwise_not(binary_image)
-    
-    cv2.imwrite('real_time_testing/step2_morph_image.jpg', binary_image)
-    return frame, binary_image
-    #_, bin = cv2.threshold(blurred,0,255,cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-    #return frame, bin
+    # Edge detection using Canny
+    edges = cv2.Canny(blurred, 50, 150)
+    cv2.imwrite('real_time_testing/edges.jpg', edges)
 
-def find_largest_contour(binary_image):
-    contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Find contours
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        # Filter out small contours based on contour area
-    min_contour_area = 60
-    contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
+    # Filter and approximate contours
+    min_contour_area = 100
+    contours = [cv2.approxPolyDP(cnt, 0.02 * cv2.arcLength(cnt, True), True) for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
     
     if contours:
-        return max(contours, key=cv2.contourArea)
+        return frame, max(contours, key=cv2.contourArea)
     else:
-        return None
+        return frame, None
 
 def crop_image(image, contour):
     if contour is not None:
@@ -53,27 +38,14 @@ def crop_image(image, contour):
         cropped_image = image[y:y+h, x:x+w]
         cv2.imwrite('real_time_testing/cropped_image.jpg', cropped_image)
         return cropped_image
-    else: return None
-
-
-def maintain_grayscale(image):
-    for row_idx, row in enumerate(image):
-        for col_idx, pixel in enumerate(row):
-            if pixel > 0.4:
-                image[row_idx, col_idx] = 1.0
-            elif pixel < 0.3:
-                image[row_idx, col_idx] = 0.0
-
-    return image
-
+    else:
+        return None
 
 def find_the_number(frame) -> np.ndarray:
     cv2.imwrite('real_time_testing/not_preprocessed_image.jpg', frame)
-    # Preprocess the image
-    image, binary_image = preprocess_image(frame)
     
-    # Find the largest contour
-    contour = find_largest_contour(binary_image)
+    # Preprocess the image
+    image, contour = preprocess_image(frame)
     
     # Crop the image
     cropped_image = crop_image(image, contour)
@@ -92,7 +64,6 @@ def find_the_number(frame) -> np.ndarray:
     
     # Normalize the image
     resized_cropped_image = resized_cropped_image / 255.0
-    #resized_cropped_image = maintain_grayscale(resized_cropped_image)
     cv2.imwrite('real_time_testing/normalized_resized_cropped_image.jpg', (resized_cropped_image * 255).astype(np.uint8))
     
     # Convert to a TensorFlow tensor and add batch dimension
@@ -103,7 +74,6 @@ def find_the_number(frame) -> np.ndarray:
     # Save or display the preprocessed image
     cv2.imwrite('real_time_testing/preprocessed_image.jpg', (resized_cropped_image * 255).astype(np.uint8))
     return tensor_image
-
 
 def classify_number(image):
     if image is None:
